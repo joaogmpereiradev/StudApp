@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { User, db, doc, setDoc, deleteDoc } from '../services/firebase';
 import { RoutineActivity } from '../types';
 import { APP_ID, COLOR_LIBRARY, ICON_LIBRARY, COLOR_STYLES } from '../constants';
@@ -15,11 +15,16 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
     const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const [isDeletingAll, setIsDeletingAll] = useState(false);
     
     // AI States
     const [aiPrompt, setAiPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     
+    // Voice State
+    const [isRecording, setIsRecording] = useState(false);
+    const recognitionRef = useRef<any>(null);
+
     const [newActivity, setNewActivity] = useState<Partial<RoutineActivity>>({ 
         time: '08:00', 
         title: '', 
@@ -51,11 +56,70 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
         }
     };
 
+    const confirmDeleteAll = async () => {
+        if (!user) return;
+        // Filter to delete only items from the active tab
+        const itemsToDelete = routine.filter(item => item.type === activeTab);
+        
+        const deletePromises = itemsToDelete.map(item => 
+            deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'routine', item.id))
+        );
+        await Promise.all(deletePromises);
+        setIsDeletingAll(false);
+    };
+
     const handleEdit = (item: RoutineActivity) => {
         setNewActivity(item);
         setEditingId(item.id);
         setIsFormOpen(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // --- VOICE RECOGNITION ---
+    const handleVoiceInput = () => {
+        if (isRecording) {
+            if (recognitionRef.current) {
+                recognitionRef.current.stop();
+            }
+            setIsRecording(false);
+            return;
+        }
+
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            alert("Seu navegador não suporta reconhecimento de voz.");
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'pt-BR';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+            setIsRecording(true);
+        };
+
+        recognition.onend = () => {
+            setIsRecording(false);
+        };
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            setAiPrompt((prev) => {
+                const spacer = prev.length > 0 && !prev.endsWith(' ') ? ' ' : '';
+                return prev + spacer + transcript;
+            });
+        };
+
+        recognition.onerror = (event: any) => {
+            console.error("Speech recognition error", event.error);
+            setIsRecording(false);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
     };
 
     // --- GEMINI AI INTEGRATION ---
@@ -89,8 +153,8 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: `Create a study routine based on this request: "${aiPrompt}". 
-                The user wants this for the '${activeTab}'. 
-                Ensure the 'type' field matches '${activeTab}'.
+                You can generate activities for both 'weekday' and 'weekend' in the same list to create a complete schedule.
+                Assign 'weekday' for Monday-Friday activities and 'weekend' for Saturday-Sunday activities.
                 Be realistic with times.`,
                 config: {
                     responseMimeType: "application/json",
@@ -137,8 +201,8 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
     };
 
     return (
-        <div className="space-y-8 animate-in relative">
-            {/* Delete Confirmation Modal */}
+        <div className="space-y-8 animate-in relative pb-12">
+            {/* Delete Single Item Modal */}
             {itemToDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in">
                     <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800 text-center space-y-4">
@@ -167,6 +231,39 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                 </div>
             )}
 
+            {/* Delete All Modal */}
+            {isDeletingAll && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in">
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl max-w-sm w-full border-2 border-rose-100 dark:border-rose-900/30 text-center space-y-4">
+                        <div className="w-16 h-16 bg-rose-500 text-white rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg shadow-rose-200 dark:shadow-none">
+                            <i className="fas fa-exclamation-triangle text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                                Excluir Rotina de {activeTab === 'weekday' ? 'Semana' : 'Fim de Semana'}?
+                            </h3>
+                            <p className="text-slate-500 text-sm mt-2">
+                                Você está prestes a apagar <strong>todas</strong> as atividades desta lista. Isso não pode ser desfeito.
+                            </p>
+                        </div>
+                        <div className="flex gap-3 pt-4">
+                            <button 
+                                onClick={() => setIsDeletingAll(false)}
+                                className="flex-1 py-4 rounded-2xl font-bold text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-widest"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={confirmDeleteAll}
+                                className="flex-1 py-4 rounded-2xl font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-200 dark:shadow-none transition-all active:scale-95 text-xs uppercase tracking-widest"
+                            >
+                                Apagar Tudo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* AI Generator Modal */}
             {isAIModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in">
@@ -178,20 +275,40 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                             <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
                                 <i className="fas fa-wand-magic-sparkles text-2xl animate-pulse"></i>
                             </div>
-                            <h3 className="text-2xl font-black text-slate-900 dark:text-white">Criar com IA</h3>
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+                                {routine.length > 0 ? "Editar com IA" : "Criar com IA"}
+                            </h3>
                             <p className="text-slate-500 text-sm mt-2">Descreva sua rotina ideal e deixe a inteligência artificial organizar seu dia.</p>
                         </div>
 
-                        <textarea 
-                            className="w-full h-32 p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/50 border-none resize-none text-sm font-medium placeholder-slate-400 shadow-inner"
-                            placeholder="Ex: Quero acordar às 7h, estudar matemática de manhã, ir para a academia antes do almoço e revisar inglês à noite."
-                            value={aiPrompt}
-                            onChange={(e) => setAiPrompt(e.target.value)}
-                        ></textarea>
+                        <div className="relative">
+                            <textarea 
+                                className="w-full h-32 p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/50 border-none resize-none text-sm font-medium placeholder-slate-400 shadow-inner pr-12"
+                                placeholder="Ex: Quero acordar às 7h, estudar matemática de manhã, ir para a academia antes do almoço e revisar inglês à noite."
+                                value={aiPrompt}
+                                onChange={(e) => setAiPrompt(e.target.value)}
+                            ></textarea>
+                            
+                            <button 
+                                onClick={handleVoiceInput}
+                                className={`absolute bottom-3 right-3 w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm ${
+                                    isRecording 
+                                    ? 'bg-rose-500 text-white animate-pulse shadow-rose-300 dark:shadow-rose-900/40' 
+                                    : 'bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white hover:scale-105'
+                                }`}
+                                title={isRecording ? "Parar gravação" : "Falar comando"}
+                            >
+                                <i className={`fas ${isRecording ? 'fa-stop' : 'fa-microphone'}`}></i>
+                            </button>
+                        </div>
 
                         <div className="flex gap-3 pt-2">
                             <button 
-                                onClick={() => setIsAIModalOpen(false)}
+                                onClick={() => {
+                                    setIsAIModalOpen(false);
+                                    if(isRecording && recognitionRef.current) recognitionRef.current.stop();
+                                    setIsRecording(false);
+                                }}
                                 className="flex-1 py-4 rounded-2xl font-bold text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-widest"
                                 disabled={isGenerating}
                             >
@@ -220,8 +337,12 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                 >
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl group-hover:bg-white/20 transition-colors"></div>
                     <div className="relative text-left">
-                        <span className="block text-xl font-black mb-0.5">Crie uma rotina com IA</span>
-                        <span className="text-indigo-100 text-xs font-medium">Gere automaticamente seu cronograma de estudos</span>
+                        <span className="block text-xl font-black mb-0.5">
+                            {routine.length > 0 ? "Edite sua rotina com IA" : "Crie uma rotina com IA"}
+                        </span>
+                        <span className="text-indigo-100 text-xs font-medium">
+                            {routine.length > 0 ? "Reorganize seu cronograma automaticamente" : "Gere automaticamente seu cronograma de estudos"}
+                        </span>
                     </div>
                     <div className="relative w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
                         <i className="fas fa-wand-magic-sparkles text-xl"></i>
@@ -298,7 +419,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800 transition-colors">
-                <table className="w-full text-left">
+                <table className="w-full text-left table-fixed">
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {routine.filter(r => r.type === activeTab).length === 0 ? (
                             <tr><td className="px-12 py-24 text-center text-slate-400 italic font-bold leading-relaxed">Lista vazia. Crie atividades para adicionar a sua rotina semanal 🚀</td></tr>
@@ -308,10 +429,10 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                                 <td className="px-10 py-10">
                                     <div className="flex flex-col md:flex-row md:items-center gap-6">
                                         <div className="flex items-center gap-4 flex-1 min-w-0">
-                                            <span className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black border shadow-sm ${COLOR_STYLES[item.color || 'indigo']}`}>
+                                            <span className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black border shadow-sm ${COLOR_STYLES[item.color || 'indigo']} shrink-0`}>
                                                 <i className={`fas ${item.icon}`}></i> {item.title}
                                             </span>
-                                            <span className="text-sm text-slate-500 dark:text-slate-600 font-medium italic truncate hidden md:block">{item.desc}</span>
+                                            <span className="text-sm text-slate-500 dark:text-slate-600 font-medium italic hidden md:block">{item.desc}</span>
                                         </div>
                                         <div className="flex gap-3 shrink-0">
                                             <button onClick={() => handleEdit(item)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-xs"></i></button>
@@ -324,6 +445,17 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                     </tbody>
                 </table>
             </div>
+
+            {routine.filter(r => r.type === activeTab).length > 0 && (
+                <div className="flex justify-center pt-8">
+                    <button 
+                        onClick={() => setIsDeletingAll(true)}
+                        className="text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 text-xs font-bold uppercase tracking-widest py-3 px-6 rounded-2xl hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all flex items-center gap-2"
+                    >
+                        <i className="fas fa-trash-alt"></i> Excluir Rotina ({activeTab === 'weekday' ? 'Semana' : 'Fim de Semana'})
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
