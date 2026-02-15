@@ -170,6 +170,13 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
         }
 
         if (!aiPrompt.trim() || !user) return;
+        
+        // 1. Validate API Key Check
+        if (!process.env.API_KEY) {
+            alert("ERRO: A chave de API do Gemini (API_KEY) não foi encontrada. Verifique as variáveis de ambiente na Vercel ou no arquivo .env.");
+            return;
+        }
+
         setIsGenerating(true);
 
         try {
@@ -195,7 +202,8 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                         color: { type: Type.STRING, description: `Color name. MUST be one of: ${validColors}` },
                         type: { type: Type.STRING, description: "Must be 'weekday' or 'weekend'" }
                     },
-                    required: ["time", "title", "desc", "icon", "color", "type"]
+                    // 2. Relaxed Schema: Removed 'desc' and 'type' from required to prevent 400 errors if model omits them
+                    required: ["time", "title", "icon", "color"]
                 }
             };
 
@@ -260,9 +268,11 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
             setAiPrompt('');
             setIsAIModalOpen(false);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error generating routine:", error);
-            alert("Desculpe, houve um erro ao processar. Tente novamente.");
+            // 3. Improved Error Messaging
+            const errorMessage = error?.message || "Erro desconhecido";
+            alert(`Erro ao processar com IA: ${errorMessage}. Verifique se a API Key está válida.`);
         } finally {
             setIsGenerating(false);
         }
