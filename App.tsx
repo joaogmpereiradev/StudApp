@@ -32,7 +32,7 @@ const App = () => {
         return window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
     
-    // Refs separados para Mobile e Desktop para corrigir o problema de click outside
+    // Refs separados para Mobile e Desktop
     const mobileSettingsRef = useRef<HTMLDivElement>(null);
     const desktopSettingsRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +64,6 @@ const App = () => {
 
     // Dark Mode Effect
     useEffect(() => {
-        // Toggle the class on HTML element
         if (isDarkMode) {
             document.documentElement.classList.add('dark');
             document.body.classList.add('bg-slate-950');
@@ -75,7 +74,6 @@ const App = () => {
             document.body.classList.remove('bg-slate-950');
         }
         
-        // Persist to Firestore if user is logged in
         if (user) {
             setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'preferences'), { isDarkMode }, { merge: true }).catch(console.error);
         }
@@ -94,17 +92,17 @@ const App = () => {
         });
 
         // Listen for lessons
-        // Note: Firestore persistence handles local caching automatically
         const unsubLessons = onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'lessons'), (s: QuerySnapshot) => {
-            setLessons(s.docs.map(d => ({ id: d.id, ...d.data() } as Lesson)).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            const loadedLessons = s.docs.map(d => ({ id: d.id, ...d.data() } as Lesson));
+            setLessons(loadedLessons.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         }, (error: any) => {
-            console.log("Listen error (likely offline):", error);
-            // Firestore persistence will keep serving cached data
+            console.log("Using cached data due to:", error.code);
         });
 
         // Listen for routine
         const unsubRoutine = onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'routine'), (s: QuerySnapshot) => {
-            setRoutine(s.docs.map(d => ({ id: d.id, ...d.data() } as RoutineActivity)).sort((a,b) => a.time.localeCompare(b.time)));
+            const loadedRoutine = s.docs.map(d => ({ id: d.id, ...d.data() } as RoutineActivity));
+            setRoutine(loadedRoutine.sort((a,b) => a.time.localeCompare(b.time)));
         });
 
         return () => { unsubLessons(); unsubRoutine(); unsubPrefs(); };
@@ -114,12 +112,9 @@ const App = () => {
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Node;
-            
-            // Verifica se o clique foi dentro do menu mobile OU do menu desktop
             const clickedInsideMobile = mobileSettingsRef.current && mobileSettingsRef.current.contains(target);
             const clickedInsideDesktop = desktopSettingsRef.current && desktopSettingsRef.current.contains(target);
 
-            // Se não clicou em nenhum dos dois, fecha o menu
             if (!clickedInsideMobile && !clickedInsideDesktop) {
                 setIsSettingsOpen(false);
             }
@@ -165,7 +160,6 @@ const App = () => {
         return <AuthScreen />;
     }
 
-    // Componente de Conteúdo do Menu para reutilização
     const SettingsMenuContent = () => (
         <>
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
@@ -189,12 +183,12 @@ const App = () => {
     );
 
     return (
-        // Added text-slate-900 for explicit light mode text color and standard dark mode text
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300 pb-20 relative">
-            {/* Offline Indicator */}
+            {/* Offline Indicator - Friendly Message */}
             {!isOnline && (
-                <div className="bg-amber-500 text-white text-center py-2 text-xs font-bold uppercase tracking-widest sticky top-0 z-[60] shadow-md animate-in">
-                    <i className="fas fa-wifi-slash mr-2"></i> Você está offline. As alterações serão salvas automaticamente.
+                <div className="bg-slate-800 dark:bg-slate-800 text-white text-center py-2 text-[10px] font-black uppercase tracking-widest sticky top-0 z-[60] shadow-md animate-in flex justify-center items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span>Modo Offline • Visualizando dados salvos</span>
                 </div>
             )}
 
