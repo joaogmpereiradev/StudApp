@@ -97,7 +97,7 @@ const App = () => {
         // Note: Firestore persistence handles local caching automatically
         const unsubLessons = onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'lessons'), (s: QuerySnapshot) => {
             setLessons(s.docs.map(d => ({ id: d.id, ...d.data() } as Lesson)).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-        }, (error) => {
+        }, (error: any) => {
             console.log("Listen error (likely offline):", error);
             // Firestore persistence will keep serving cached data
         });
