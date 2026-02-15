@@ -24,6 +24,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
     // Voice State
     const [isRecording, setIsRecording] = useState(false);
     const recognitionRef = useRef<any>(null);
+    const basePromptRef = useRef<string>(''); // Stores text present before recording starts
 
     const [newActivity, setNewActivity] = useState<Partial<RoutineActivity>>({ 
         time: '08:00', 
@@ -75,7 +76,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // --- VOICE RECOGNITION ---
+    // --- VOICE RECOGNITION (REAL TIME) ---
     const handleVoiceInput = () => {
         if (isRecording) {
             if (recognitionRef.current) {
@@ -94,8 +95,11 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
 
         const recognition = new SpeechRecognition();
         recognition.lang = 'pt-BR';
-        recognition.continuous = false;
-        recognition.interimResults = false;
+        recognition.continuous = true; // Permite falar continuamente
+        recognition.interimResults = true; // Mostra resultados enquanto fala
+
+        // Save current text so we append to it, rather than replace it
+        basePromptRef.current = aiPrompt;
 
         recognition.onstart = () => {
             setIsRecording(true);
@@ -106,11 +110,28 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
         };
 
         recognition.onresult = (event: any) => {
-            const transcript = event.results[0][0].transcript;
-            setAiPrompt((prev) => {
-                const spacer = prev.length > 0 && !prev.endsWith(' ') ? ' ' : '';
-                return prev + spacer + transcript;
-            });
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+
+            // Combine base text + previously finalized parts of this session (if we stored them) + current transcript
+            // Simplified logic: Just append current session transcript to base.
+            // Note: In a production app, we'd manage the cursor position, but appending is safe here.
+            
+            // To avoid duplication, we rebuild the string from the base reference + what the recognition caught
+            const currentSessionText = finalTranscript + interimTranscript;
+            
+            // Add a space if the base text didn't end with one and isn't empty
+            const spacer = (basePromptRef.current.length > 0 && !basePromptRef.current.endsWith(' ')) ? ' ' : '';
+            
+            setAiPrompt(basePromptRef.current + spacer + currentSessionText);
         };
 
         recognition.onerror = (event: any) => {
@@ -134,6 +155,10 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
             const validColors = COLOR_LIBRARY.map(c => c.value).join(', ');
             const validIcons = ICON_LIBRARY.join(', ');
 
+            // Get current routine to provide context
+            const currentRoutine = routine.filter(r => r.type === activeTab);
+            const currentRoutineJSON = JSON.stringify(currentRoutine.map(({id, ...rest}) => rest)); // Send without IDs to avoid confusion
+
             const schema: Schema = {
                 type: Type.ARRAY,
                 items: {
@@ -152,21 +177,34 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
 
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: `Create a study routine based on this request: "${aiPrompt}". 
-                You can generate activities for both 'weekday' and 'weekend' in the same list to create a complete schedule.
-                Assign 'weekday' for Monday-Friday activities and 'weekend' for Saturday-Sunday activities.
-                Be realistic with times.`,
+                contents: `
+                I am managing a schedule for '${activeTab}'.
+                
+                CURRENT ROUTINE (JSON):
+                ${currentRoutineJSON}
+
+                USER REQUEST: 
+                "${aiPrompt}"
+
+                TASK:
+                1. Analyze the User Request.
+                2. If the user asks to "Create" a routine from scratch, ignore the Current Routine.
+                3. If the user asks to "Edit", "Change", or "Add" to the routine, use the Current Routine as a base.
+                4. CRITICAL: Resolve conflicts intelligently. For example, if the user says "Wake up at 9am", REMOVE any existing activities before 9am (like an old 7am breakfast) and shift the schedule accordingly. Do not allow duplicate meals (e.g., two breakfasts) or conflicting times.
+                5. Return the COMPLETE, VALID JSON list of activities for '${activeTab}'. This list will REPLACE the current one in the database.
+                `,
                 config: {
                     responseMimeType: "application/json",
                     responseSchema: schema,
-                    systemInstruction: `You are an expert study planner. 
-                    Use the provided icons and colors to categorize activities logically (e.g., 'fa-coffee' for breaks, 'fa-book' for study).
+                    systemInstruction: `You are an expert study planner and scheduler. 
+                    Your goal is to organize the user's day logically.
+                    Always ensure times are sorted and realistic.
+                    Use the provided icons and colors to categorize activities logically.
                     Available icons: ${validIcons}.
                     Available colors: ${validColors}.`
                 }
             });
 
-            // Clean up Markdown formatting if present (e.g., ```json ... ```)
             let jsonText = response.text || "[]";
             if (jsonText.startsWith("```")) {
                 jsonText = jsonText.replace(/^```(json)?\s*/, "").replace(/\s*```$/, "");
@@ -174,13 +212,19 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
 
             const generatedActivities = JSON.parse(jsonText);
 
-            // Batch save to Firestore
+            // 1. Delete OLD activities for this tab (Smart Update Strategy: Wipe & Replace for this specific view)
+            const deletePromises = currentRoutine.map(item => 
+                deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'routine', item.id))
+            );
+            await Promise.all(deletePromises);
+
+            // 2. Add NEW/UPDATED activities
             const batchPromises = generatedActivities.map(async (activity: any) => {
                 const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-                // Ensure valid fallback if AI hallucinates
                 const safeActivity = {
                     ...activity,
                     id,
+                    type: activeTab, // Force type to match current tab to be safe
                     icon: ICON_LIBRARY.includes(activity.icon) ? activity.icon : 'fa-book',
                     color: COLOR_LIBRARY.some(c => c.value === activity.color) ? activity.color : 'indigo'
                 };
@@ -194,7 +238,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
 
         } catch (error) {
             console.error("Error generating routine:", error);
-            alert("Desculpe, não consegui criar a rotina agora. Verifique sua chave de API ou tente novamente.");
+            alert("Desculpe, houve um erro ao processar. Tente novamente.");
         } finally {
             setIsGenerating(false);
         }
@@ -320,7 +364,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                                 className="flex-1 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isGenerating ? (
-                                    <><i className="fas fa-circle-notch fa-spin"></i> Criando...</>
+                                    <><i className="fas fa-circle-notch fa-spin"></i> Organizando...</>
                                 ) : (
                                     <><i className="fas fa-bolt"></i> Gerar</>
                                 )}
