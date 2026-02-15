@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { User, db, doc, setDoc, deleteDoc } from '../services/firebase';
 import { RoutineActivity } from '../types';
 import { APP_ID, COLOR_LIBRARY, ICON_LIBRARY, COLOR_STYLES } from '../constants';
@@ -34,6 +34,36 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
         color: 'indigo' 
     });
 
+    // Group activities by time to show options
+    const groupedRoutine = useMemo(() => {
+        const filtered = routine.filter(r => r.type === activeTab);
+        const groups: Record<string, RoutineActivity[]> = {};
+        
+        filtered.forEach(item => {
+            if (!groups[item.time]) {
+                groups[item.time] = [];
+            }
+            groups[item.time].push(item);
+        });
+
+        // Sort keys (times)
+        return Object.keys(groups).sort().map(time => ({
+            time,
+            items: groups[time]
+        }));
+    }, [routine, activeTab]);
+
+    // Helper to clear form state
+    const resetForm = () => {
+        setNewActivity({ 
+            time: '08:00', 
+            title: '', 
+            desc: '', 
+            icon: 'fa-book', 
+            color: 'indigo' 
+        });
+    };
+
     const saveActivity = async () => {
         if (!newActivity.title || !user) return;
         
@@ -45,7 +75,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
             id // Ensure ID is saved in doc as well
         });
         
-        setNewActivity({ time: '08:00', title: '', desc: '', icon: 'fa-book', color: 'indigo' });
+        resetForm();
         setEditingId(null); 
         setIsFormOpen(false);
     };
@@ -113,7 +143,10 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
             let interimTranscript = '';
             let finalTranscript = '';
 
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
+            // Iterate over ALL results in the session (starting from 0), 
+            // not just the new ones (event.resultIndex).
+            // This prevents text from disappearing when a "sentence" is finalized during a long pause.
+            for (let i = 0; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     finalTranscript += event.results[i][0].transcript;
                 } else {
@@ -123,9 +156,6 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
 
             // Combine base text + previously finalized parts of this session (if we stored them) + current transcript
             // Simplified logic: Just append current session transcript to base.
-            // Note: In a production app, we'd manage the cursor position, but appending is safe here.
-            
-            // To avoid duplication, we rebuild the string from the base reference + what the recognition caught
             const currentSessionText = finalTranscript + interimTranscript;
             
             // Add a space if the base text didn't end with one and isn't empty
@@ -145,6 +175,12 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
 
     // --- GEMINI AI INTEGRATION ---
     const generateRoutineWithAI = async () => {
+        // Stop recording immediately if it's running
+        if (isRecording && recognitionRef.current) {
+            recognitionRef.current.stop();
+            setIsRecording(false);
+        }
+
         if (!aiPrompt.trim() || !user) return;
         setIsGenerating(true);
 
@@ -190,7 +226,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                 1. Analyze the User Request.
                 2. If the user asks to "Create" a routine from scratch, ignore the Current Routine.
                 3. If the user asks to "Edit", "Change", or "Add" to the routine, use the Current Routine as a base.
-                4. CRITICAL: Resolve conflicts intelligently. For example, if the user says "Wake up at 9am", REMOVE any existing activities before 9am (like an old 7am breakfast) and shift the schedule accordingly. Do not allow duplicate meals (e.g., two breakfasts) or conflicting times.
+                4. CRITICAL: Resolve conflicts intelligently. However, if the user implies OPTIONS (e.g., "Gym OR Running" at the same time), keep both activities at the exact same time. Do not allow duplicate logical errors (like two breakfasts at different times), but parallel options are allowed.
                 5. Return the COMPLETE, VALID JSON list of activities for '${activeTab}'. This list will REPLACE the current one in the database.
                 `,
                 config: {
@@ -394,7 +430,11 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                 </button>
 
                 <button 
-                    onClick={() => setIsFormOpen(true)} 
+                    onClick={() => {
+                        resetForm();
+                        setEditingId(null);
+                        setIsFormOpen(true);
+                    }} 
                     className="w-full p-5 bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] text-slate-400 dark:text-slate-600 font-bold hover:border-slate-400 hover:text-slate-600 dark:hover:text-slate-400 transition-all flex items-center justify-center gap-3 group"
                 >
                     <i className="fas fa-plus-circle text-indigo-500 group-hover:scale-110 transition-transform"></i> 
@@ -405,8 +445,10 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
             {isFormOpen && (
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] shadow-xl space-y-6 animate-in border border-slate-100 dark:border-slate-800">
                     <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4 text-slate-400">
-                        <h2 className="text-xs font-black uppercase tracking-widest">Nova Atividade</h2>
-                        <button onClick={()=>{setIsFormOpen(false); setEditingId(null);}} className="hover:text-rose-500 transition-colors">
+                        <h2 className="text-xs font-black uppercase tracking-widest">
+                            {editingId ? "Edição de Atividade" : "Nova Atividade"}
+                        </h2>
+                        <button onClick={()=>{setIsFormOpen(false); setEditingId(null); resetForm();}} className="hover:text-rose-500 transition-colors">
                             <i className="fas fa-times"></i>
                         </button>
                     </div>
@@ -417,11 +459,11 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                         </div>
                         <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Atividade</label>
-                            <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none font-bold placeholder-slate-400" value={newActivity.title} onChange={e=>setNewActivity({...newActivity, title: e.target.value})} placeholder="Título" />
+                            <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none font-bold placeholder-slate-400" value={newActivity.title} onChange={e=>setNewActivity({...newActivity, title: e.target.value})} placeholder="Ex: Café da manhã" />
                         </div>
                         <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Detalhes</label>
-                            <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none font-bold placeholder-slate-400" value={newActivity.desc} onChange={e=>setNewActivity({...newActivity, desc: e.target.value})} placeholder="Descrição" />
+                            <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none font-bold placeholder-slate-400" value={newActivity.desc} onChange={e=>setNewActivity({...newActivity, desc: e.target.value})} placeholder="Ex: Pão com ovos e café" />
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
@@ -465,23 +507,38 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
             <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800 transition-colors">
                 <table className="w-full text-left table-fixed">
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {routine.filter(r => r.type === activeTab).length === 0 ? (
+                        {groupedRoutine.length === 0 ? (
                             <tr><td className="px-12 py-24 text-center text-slate-400 italic font-bold leading-relaxed">Lista vazia. Crie atividades para adicionar a sua rotina semanal 🚀</td></tr>
-                        ) : routine.filter(r => r.type === activeTab).map((item) => (
-                            <tr key={item.id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all">
-                                <td className="px-10 py-10 text-lg font-black text-slate-800 dark:text-slate-300 w-24 md:w-32 align-top">{item.time}</td>
+                        ) : groupedRoutine.map(({ time, items }) => (
+                            <tr key={time} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all">
+                                <td className="px-10 py-10 text-lg font-black text-slate-800 dark:text-slate-300 w-24 md:w-32 align-top">{time}</td>
                                 <td className="px-10 py-10">
-                                    <div className="flex flex-col md:flex-row md:items-center gap-6">
-                                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                                            <span className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black border shadow-sm ${COLOR_STYLES[item.color || 'indigo']} shrink-0`}>
-                                                <i className={`fas ${item.icon}`}></i> {item.title}
-                                            </span>
-                                            <span className="text-sm text-slate-500 dark:text-slate-600 font-medium italic hidden md:block">{item.desc}</span>
-                                        </div>
-                                        <div className="flex gap-3 shrink-0">
-                                            <button onClick={() => handleEdit(item)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-xs"></i></button>
-                                            <button onClick={() => setItemToDelete(item.id)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt text-xs"></i></button>
-                                        </div>
+                                    <div className="flex flex-col gap-6">
+                                        {items.map((item, index) => (
+                                            <div key={item.id} className="relative">
+                                                {/* Separator for options */}
+                                                {index > 0 && (
+                                                    <div className="flex items-center gap-4 py-4 opacity-50">
+                                                        <div className="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">OU</span>
+                                                        <div className="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                                                    </div>
+                                                )}
+                                                
+                                                <div className="flex flex-col md:flex-row md:items-center gap-6">
+                                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                        <span className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black border shadow-sm ${COLOR_STYLES[item.color || 'indigo']} shrink-0`}>
+                                                            <i className={`fas ${item.icon}`}></i> {item.title}
+                                                        </span>
+                                                        <span className="text-sm text-slate-500 dark:text-slate-600 font-medium italic hidden md:block">{item.desc}</span>
+                                                    </div>
+                                                    <div className="flex gap-3 shrink-0">
+                                                        <button onClick={() => handleEdit(item)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-xs"></i></button>
+                                                        <button onClick={() => setItemToDelete(item.id)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt text-xs"></i></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </td>
                             </tr>
