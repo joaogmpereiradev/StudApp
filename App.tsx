@@ -43,13 +43,17 @@ const App = () => {
         return () => unsubscribe();
     }, []);
 
-    // Dark Mode Effect - The Fix
+    // Dark Mode Effect
     useEffect(() => {
-        // Toggle the class on HTML element only
+        // Toggle the class on HTML element
         if (isDarkMode) {
             document.documentElement.classList.add('dark');
+            document.body.classList.add('bg-slate-950');
+            document.body.classList.remove('bg-slate-50');
         } else {
             document.documentElement.classList.remove('dark');
+            document.body.classList.add('bg-slate-50');
+            document.body.classList.remove('bg-slate-950');
         }
         
         // Persist to Firestore if user is logged in
@@ -155,7 +159,7 @@ const App = () => {
     );
 
     return (
-        // The main container manages background colors for light/dark mode using standard Tailwind classes
+        // Added text-slate-900 for explicit light mode text color and standard dark mode text
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300 pb-20">
             {/* Password Reset Modal */}
             {showPasswordResetModal && (
@@ -194,7 +198,7 @@ const App = () => {
             <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in">
                 <header className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 pt-4">
                     <div className="flex items-center justify-between w-full md:w-auto">
-                        <h1 className="text-2xl font-black flex items-center gap-3">
+                        <h1 className="text-2xl font-black flex items-center gap-3 text-slate-900 dark:text-white">
                             <img src="https://img.icons8.com/fluency/240/graduation-cap.png" className="w-10 h-10" alt="Logo" />
                             <span className="tracking-tighter">StudApp</span>
                         </h1>
