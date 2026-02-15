@@ -25,6 +25,7 @@ const App = () => {
     const [view, setView] = useState<ViewState>('routine');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
     
     // Initialize Dark Mode from system preference or previous session
     const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -37,6 +38,20 @@ const App = () => {
 
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [routine, setRoutine] = useState<RoutineActivity[]>([]);
+
+    // Online/Offline Status Listener
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
     // Authentication Listener
     useEffect(() => {
@@ -79,8 +94,12 @@ const App = () => {
         });
 
         // Listen for lessons
+        // Note: Firestore persistence handles local caching automatically
         const unsubLessons = onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'lessons'), (s: QuerySnapshot) => {
             setLessons(s.docs.map(d => ({ id: d.id, ...d.data() } as Lesson)).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        }, (error) => {
+            console.log("Listen error (likely offline):", error);
+            // Firestore persistence will keep serving cached data
         });
 
         // Listen for routine
@@ -171,7 +190,14 @@ const App = () => {
 
     return (
         // Added text-slate-900 for explicit light mode text color and standard dark mode text
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300 pb-20">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300 pb-20 relative">
+            {/* Offline Indicator */}
+            {!isOnline && (
+                <div className="bg-amber-500 text-white text-center py-2 text-xs font-bold uppercase tracking-widest sticky top-0 z-[60] shadow-md animate-in">
+                    <i className="fas fa-wifi-slash mr-2"></i> Você está offline. As alterações serão salvas automaticamente.
+                </div>
+            )}
+
             {/* Password Reset Modal */}
             {showPasswordResetModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in">

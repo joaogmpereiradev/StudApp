@@ -66,6 +66,6 @@ export const doc = (parent: any, ...paths: string[]) => {
     return parent.doc(paths.join('/'));
 };
 
-export const onSnapshot = (ref: any, next: any) => ref.onSnapshot(next);
+export const onSnapshot = (ref: any, next: any, error?: any) => ref.onSnapshot(next, error);
 export const setDoc = (ref: any, data: any, options?: any) => ref.set(data, options);
 export const deleteDoc = (ref: any) => ref.delete();

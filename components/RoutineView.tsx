@@ -511,8 +511,8 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                             <tr><td className="px-12 py-24 text-center text-slate-400 italic font-bold leading-relaxed">Lista vazia. Crie atividades para adicionar a sua rotina semanal 🚀</td></tr>
                         ) : groupedRoutine.map(({ time, items }) => (
                             <tr key={time} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all">
-                                <td className="px-10 py-10 text-lg font-black text-slate-800 dark:text-slate-300 w-24 md:w-32 align-top">{time}</td>
-                                <td className="px-10 py-10">
+                                <td className="px-4 md:px-10 py-10 text-lg font-black text-slate-800 dark:text-slate-300 w-24 md:w-32 align-top">{time}</td>
+                                <td className="px-4 md:px-10 py-10">
                                     <div className="flex flex-col gap-6">
                                         {items.map((item, index) => (
                                             <div key={item.id} className="relative">
@@ -526,13 +526,18 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                                                 )}
                                                 
                                                 <div className="flex flex-col md:flex-row md:items-center gap-6">
-                                                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                                                        <span className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black border shadow-sm ${COLOR_STYLES[item.color || 'indigo']} shrink-0`}>
-                                                            <i className={`fas ${item.icon}`}></i> {item.title}
+                                                    <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:gap-4 flex-1 min-w-0 w-full">
+                                                        <span className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black border shadow-sm ${COLOR_STYLES[item.color || 'indigo']} max-w-full`}>
+                                                            <i className={`fas ${item.icon} shrink-0`}></i> 
+                                                            <span className="truncate">{item.title}</span>
                                                         </span>
-                                                        <span className="text-sm text-slate-500 dark:text-slate-600 font-medium italic hidden md:block">{item.desc}</span>
+                                                        {item.desc && (
+                                                            <span className="text-sm text-slate-500 dark:text-slate-600 font-medium italic break-words w-full md:w-auto pl-1 md:pl-0">
+                                                                {item.desc}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                    <div className="flex gap-3 shrink-0">
+                                                    <div className="flex gap-3 shrink-0 self-end md:self-auto">
                                                         <button onClick={() => handleEdit(item)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-xs"></i></button>
                                                         <button onClick={() => setItemToDelete(item.id)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt text-xs"></i></button>
                                                     </div>
