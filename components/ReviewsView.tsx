@@ -191,51 +191,53 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl border border-slate-100 dark:border-slate-800">
-                <table className="w-full text-left">
-                    <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">
-                        <tr>
-                            <th className="px-10 py-6">CONTEÚDO</th>
-                            <th className="px-2 py-6 text-center">R1</th>
-                            <th className="px-2 py-6 text-center">R2</th>
-                            <th className="px-2 py-6 text-center">R3</th>
-                            <th className="px-2 py-6 text-center">R4</th>
-                            <th className="px-10 text-right"></th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {filteredLessons.length === 0 ? (
-                            <tr><td colSpan={6} className="px-10 py-24 text-center text-slate-300 dark:text-slate-700 font-bold italic">Nada agendado 🎓</td></tr>
-                        ) : filteredLessons.map(l => (
-                            <tr key={l.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                <td className="px-10 py-10">
-                                    <p className="text-sm font-black text-slate-800 dark:text-slate-300 mb-1 leading-none">{l.subject}</p>
-                                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-tighter">{l.topic}</p>
-                                </td>
-                                {l.revs && l.revs.map((r, i) => (
-                                    <td key={i} className="px-2 py-10 text-center">
-                                        <button 
-                                            onClick={() => toggleReview(l, i)}
-                                            className={`w-11 h-11 rounded-2xl border-2 text-[9px] font-black transition-all shadow-sm active:scale-90 ${getStatusColor(r.date, r.done)}`}
-                                        >
-                                            {r.date.split('-').reverse().slice(0,2).join('/')}
-                                        </button>
-                                    </td>
-                                ))}
-                                <td className="px-10 py-10 text-right">
-                                    <div className="flex justify-end gap-3">
-                                        <button onClick={() => handleEdit(l)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-300 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
-                                            <i className="fas fa-pencil-alt text-xs"></i>
-                                        </button>
-                                        <button onClick={() => setLessonToDelete(l.id)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-300 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm">
-                                            <i className="fas fa-trash-alt text-xs"></i>
-                                        </button>
-                                    </div>
-                                </td>
+            <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left min-w-[700px] md:min-w-0">
+                        <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">
+                            <tr>
+                                <th className="px-10 py-6 sticky left-0 bg-slate-50 dark:bg-slate-800/50 z-10 shadow-sm md:shadow-none md:static">CONTEÚDO</th>
+                                <th className="px-2 py-6 text-center">R1</th>
+                                <th className="px-2 py-6 text-center">R2</th>
+                                <th className="px-2 py-6 text-center">R3</th>
+                                <th className="px-2 py-6 text-center">R4</th>
+                                <th className="px-10 text-right"></th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {filteredLessons.length === 0 ? (
+                                <tr><td colSpan={6} className="px-10 py-24 text-center text-slate-300 dark:text-slate-700 font-bold italic">Nada agendado 🎓</td></tr>
+                            ) : filteredLessons.map(l => (
+                                <tr key={l.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                    <td className="px-10 py-10 sticky left-0 bg-white dark:bg-slate-900 md:bg-transparent z-10 shadow-sm md:shadow-none md:static group-hover:bg-slate-50 dark:group-hover:bg-slate-900/50">
+                                        <p className="text-sm font-black text-slate-800 dark:text-slate-300 mb-1 leading-none">{l.subject}</p>
+                                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-tighter">{l.topic}</p>
+                                    </td>
+                                    {l.revs && l.revs.map((r, i) => (
+                                        <td key={i} className="px-2 py-10 text-center">
+                                            <button 
+                                                onClick={() => toggleReview(l, i)}
+                                                className={`w-11 h-11 rounded-2xl border-2 text-[9px] font-black transition-all shadow-sm active:scale-90 ${getStatusColor(r.date, r.done)}`}
+                                            >
+                                                {r.date.split('-').reverse().slice(0,2).join('/')}
+                                            </button>
+                                        </td>
+                                    ))}
+                                    <td className="px-10 py-10 text-right">
+                                        <div className="flex justify-end gap-3">
+                                            <button onClick={() => handleEdit(l)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-300 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                                                <i className="fas fa-pencil-alt text-xs"></i>
+                                            </button>
+                                            <button onClick={() => setLessonToDelete(l.id)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-300 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+                                                <i className="fas fa-trash-alt text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
             
             <div className="flex flex-wrap justify-center gap-8 py-8 px-10 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-slate-800 mt-8 animate-in transition-colors">
