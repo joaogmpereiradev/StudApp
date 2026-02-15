@@ -1,0 +1,5 @@
+{
+  "name": "StudApp",
+  "description": "A high-performance study organization app helping students manage routines and spaced repetition reviews.",
+  "requestFramePermissions": []
+}
