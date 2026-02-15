@@ -31,7 +31,9 @@ const App = () => {
         return window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
     
-    const settingsRef = useRef<HTMLDivElement>(null);
+    // Refs separados para Mobile e Desktop para corrigir o problema de click outside
+    const mobileSettingsRef = useRef<HTMLDivElement>(null);
+    const desktopSettingsRef = useRef<HTMLDivElement>(null);
 
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [routine, setRoutine] = useState<RoutineActivity[]>([]);
@@ -92,7 +94,14 @@ const App = () => {
     // Click Outside for Settings Menu
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            
+            // Verifica se o clique foi dentro do menu mobile OU do menu desktop
+            const clickedInsideMobile = mobileSettingsRef.current && mobileSettingsRef.current.contains(target);
+            const clickedInsideDesktop = desktopSettingsRef.current && desktopSettingsRef.current.contains(target);
+
+            // Se não clicou em nenhum dos dois, fecha o menu
+            if (!clickedInsideMobile && !clickedInsideDesktop) {
                 setIsSettingsOpen(false);
             }
         };
@@ -206,7 +215,7 @@ const App = () => {
                         </h1>
                         
                         {/* Mobile Settings Toggle */}
-                        <div className="md:hidden relative" ref={settingsRef}>
+                        <div className="md:hidden relative" ref={mobileSettingsRef}>
                             <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className="w-11 h-11 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 shadow-sm">
                                 <i className="fas fa-cog"></i>
                             </button>
@@ -225,7 +234,7 @@ const App = () => {
                         </nav>
                         
                         {/* Desktop Settings Toggle */}
-                        <div className="hidden md:block relative" ref={settingsRef}>
+                        <div className="hidden md:block relative" ref={desktopSettingsRef}>
                             <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className="w-11 h-11 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-500 hover:text-indigo-600 shadow-sm transition-all">
                                 <i className="fas fa-cog text-xl"></i>
                             </button>
