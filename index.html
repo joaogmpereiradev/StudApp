@@ -39,9 +39,13 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // ALTERADO: Uso de caminho relativo (./sw.js) para evitar erros de origem cruzada
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker registrado!', reg.scope))
+                // CORREÇÃO CRÍTICA:
+                // Constrói a URL do Service Worker baseada na localização atual da janela (iframe).
+                // Isso ignora qualquer tag <base> ou configuração de ambiente que aponte para 'ai.studio'.
+                const swUrl = new URL('sw.js', window.location.href).href;
+                
+                navigator.serviceWorker.register(swUrl)
+                    .then(reg => console.log('Service Worker registrado com sucesso:', reg.scope))
                     .catch(err => console.error('Falha ao registrar Service Worker:', err));
             });
         }
