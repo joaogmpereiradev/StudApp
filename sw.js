@@ -1,59 +1,96 @@
-const CACHE_NAME = 'studapp-v1';
-const DYNAMIC_CACHE = 'studapp-dynamic-v1';
+const CACHE_NAME = 'studapp-v2';
+const DYNAMIC_CACHE = 'studapp-dynamic-v2';
 
-// Arquivos essenciais para o "Shell" do aplicativo
+// Lista explícita de arquivos para garantir que o app funcione offline.
+// Inclui bibliotecas externas (CDNs) e os arquivos fonte do projeto.
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/index.tsx',
-  '/manifest.json'
+  '/App.tsx',
+  '/manifest.json',
+  '/types.ts',
+  '/constants.ts',
+  '/services/firebase.ts',
+  '/components/AuthScreen.tsx',
+  '/components/RoutineView.tsx',
+  '/components/ReviewsView.tsx',
+  // CDNs Críticos para o visual
+  'https://cdn.tailwindcss.com',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
 ];
 
-// Instalação do Service Worker
+// Instalação: Baixa e salva tudo da lista acima imediatamente
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      // Usamos Promise.all para que falhas em um arquivo não impeçam os outros de serem cacheados
+      return Promise.all(
+        ASSETS_TO_CACHE.map(url => {
+          return cache.add(url).catch(err => {
+            console.warn('Falha ao cachear recurso na instalação:', url, err);
+          });
+        })
+      );
     })
   );
 });
 
-// Ativação e limpeza de caches antigos
+// Ativação: Limpa caches antigos para garantir que a nova versão seja usada
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME && key !== DYNAMIC_CACHE) {
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    caches.keys().then((keys) => Promise.all(
+      keys.map((key) => {
+        if (key !== CACHE_NAME && key !== DYNAMIC_CACHE) {
+          return caches.delete(key);
+        }
+      })
+    )).then(() => self.clients.claim())
   );
 });
 
-// Interceptação de requisições
+// Fetch: A estratégia principal
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // NÃO fazer cache de requisições para a API do Firebase/Firestore ou GenAI (exceto os scripts do SDK)
-  // O SDK do Firebase gerencia sua própria persistência offline (IndexedDB) para os dados.
-  // Mas queremos cachear os scripts JS do Firebase vindos do esm.sh.
+  // 1. Ignorar chamadas de API de dados (Firebase Firestore / GenAI)
+  // O SDK do Firebase já lida com persistência de dados (IndexedDB), não queremos cachear as requisições de rede dele.
+  // Porém, queremos cachear os scripts JS do Firebase vindos do esm.sh.
   if (url.hostname.includes('googleapis.com') || 
-      (url.hostname.includes('firebase') && !url.hostname.includes('esm.sh')) || 
-      url.hostname.includes('googleusercontent.com')) {
+      url.hostname.includes('firestore') ||
+      (url.hostname.includes('firebase') && !url.hostname.includes('esm.sh'))) {
     return;
   }
 
-  // Estratégia: Network First, falling back to Cache
+  // 2. Requisições de Navegação (HTML) -> Network First, Fallback to Cache, Fallback to Index
+  // Isso garante que se você der refresh offline, o app carrega o index.html
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          return caches.match(event.request)
+            .then(res => {
+                if (res) return res;
+                return caches.match('/index.html'); // Fallback para SPA (Single Page App)
+            });
+        })
+    );
+    return;
+  }
+
+  // 3. Ativos Estáticos (JS, CSS, Fontes, Imagens) -> Cache First, Network Background
+  // Tenta pegar do cache primeiro para velocidade máxima e suporte offline.
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Se a resposta for válida, clonamos e salvamos no cache dinâmico.
-        // Relaxamos a verificação para permitir scripts de CDNs externos (esm.sh) que podem ser cors ou opaque.
-        if (!response || response.status !== 200 && response.status !== 0) {
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      // Se não estiver no cache, busca na rede e salva no cache dinâmico
+      return fetch(event.request).then((response) => {
+        // Verifica se a resposta é válida (status 0 é para respostas 'opaques' de CDNs como esm.sh/tailwindcss)
+        if (!response || (response.status !== 200 && response.status !== 0)) {
           return response;
         }
 
@@ -63,10 +100,10 @@ self.addEventListener('fetch', (event) => {
         });
 
         return response;
-      })
-      .catch(() => {
-        // Se estiver offline e o fetch falhar, tenta retornar do cache
-        return caches.match(event.request);
-      })
+      }).catch(err => {
+         // Se falhar (offline) e não estiver no cache, não há muito o que fazer para assets novos
+         console.log('Fetch falhou (offline):', event.request.url);
+      });
+    })
   );
 });
