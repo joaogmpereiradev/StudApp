@@ -3,16 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Meta tag essencial para dizer ao navegador mobile que o site suporta light/dark mode -->
     <meta name="color-scheme" content="light dark">
-    <!-- A cor da barra de status será controlada via JS no App.tsx -->
     <meta name="theme-color" content="#f8fafc"> 
     
     <title>StudApp | Performance nos Estudos</title>
     <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/240/graduation-cap.png">
     <link rel="manifest" href="/manifest.json">
     
-    <!-- Configuração do Tailwind DEVE vir antes do script CDN para aplicar 'darkMode: class' -->
+    <script>
+        // Init Dark Mode
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -25,12 +31,12 @@
             }
         }
     </script>
-    <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
         body { font-family: 'Inter', sans-serif; }
         
         /* Custom Scrollbar */
@@ -68,9 +74,8 @@
 }
 </script>
 </head>
-<body>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
     <div id="root"></div>
-    <!-- Vite Entry Point -->
     <script type="module" src="/index.tsx"></script>
 </body>
 </html>
