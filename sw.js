@@ -38,22 +38,22 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // NÃO fazer cache de requisições para a API do Firebase/Firestore ou GenAI
-  // O SDK do Firebase gerencia sua própria persistência offline (IndexedDB)
+  // NÃO fazer cache de requisições para a API do Firebase/Firestore ou GenAI (exceto os scripts do SDK)
+  // O SDK do Firebase gerencia sua própria persistência offline (IndexedDB) para os dados.
+  // Mas queremos cachear os scripts JS do Firebase vindos do esm.sh.
   if (url.hostname.includes('googleapis.com') || 
-      url.hostname.includes('firebase') || 
+      (url.hostname.includes('firebase') && !url.hostname.includes('esm.sh')) || 
       url.hostname.includes('googleusercontent.com')) {
     return;
   }
 
   // Estratégia: Network First, falling back to Cache
-  // Tenta pegar o mais recente da internet. Se falhar (offline), pega do cache.
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Se a resposta for válida, clonamos e salvamos no cache dinâmico
-        // Isso guarda os módulos do ESM.sh, CSS do CDN, Fonts, etc.
-        if (!response || response.status !== 200 || response.type !== 'basic' && response.type !== 'cors') {
+        // Se a resposta for válida, clonamos e salvamos no cache dinâmico.
+        // Relaxamos a verificação para permitir scripts de CDNs externos (esm.sh) que podem ser cors ou opaque.
+        if (!response || response.status !== 200 && response.status !== 0) {
           return response;
         }
 

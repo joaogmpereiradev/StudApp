@@ -125,10 +125,11 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
 
         const recognition = new SpeechRecognition();
         recognition.lang = 'pt-BR';
-        recognition.continuous = true; // Permite falar continuamente
-        recognition.interimResults = true; // Mostra resultados enquanto fala
+        recognition.continuous = true; 
+        // FIX: Set interimResults to false to prevent Android duplication bugs ("criecriecrie")
+        recognition.interimResults = false; 
 
-        // Save current text so we append to it, rather than replace it
+        // Save current text so we append to it
         basePromptRef.current = aiPrompt;
 
         recognition.onstart = () => {
@@ -140,28 +141,15 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
         };
 
         recognition.onresult = (event: any) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
+            // Simplified logic: Join all results in the current session
+            const currentSessionTranscript = Array.from(event.results)
+                .map((result: any) => result[0].transcript)
+                .join(''); // Join chunks without spaces, spaces are usually in the transcript or we handle below
 
-            // Iterate over ALL results in the session (starting from 0), 
-            // not just the new ones (event.resultIndex).
-            // This prevents text from disappearing when a "sentence" is finalized during a long pause.
-            for (let i = 0; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
-                }
-            }
-
-            // Combine base text + previously finalized parts of this session (if we stored them) + current transcript
-            // Simplified logic: Just append current session transcript to base.
-            const currentSessionText = finalTranscript + interimTranscript;
+            // Smart spacing: Add space if base text exists and doesn't end with space
+            const spacer = (basePromptRef.current.length > 0 && !basePromptRef.current.endsWith(' ') && currentSessionTranscript.length > 0) ? ' ' : '';
             
-            // Add a space if the base text didn't end with one and isn't empty
-            const spacer = (basePromptRef.current.length > 0 && !basePromptRef.current.endsWith(' ')) ? ' ' : '';
-            
-            setAiPrompt(basePromptRef.current + spacer + currentSessionText);
+            setAiPrompt(basePromptRef.current + spacer + currentSessionTranscript);
         };
 
         recognition.onerror = (event: any) => {

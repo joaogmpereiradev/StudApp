@@ -28,10 +28,10 @@ provider.setCustomParameters({
     prompt: 'select_account'
 });
 
-// Enable offline persistence
+// Enable offline persistence with synchronizeTabs to improve reliability
 try { 
-    db.enablePersistence().catch((err) => {
-        // Fail silently if not supported (e.g. multiple tabs open or privacy mode)
+    db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+        // Fail silently if not supported (e.g. privacy mode)
         console.log("Persistence disabled/failed:", err);
     }); 
 } catch (e) { 
