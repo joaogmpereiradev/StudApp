@@ -13,6 +13,7 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [newLesson, setNewLesson] = useState({ subject: '', topic: '', date: new Date().toISOString().split('T')[0] });
     const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     const filteredLessons = useMemo(() => {
         const today = new Date().toISOString().split('T')[0];
@@ -39,32 +40,65 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
         });
     }, [lessons, searchText, statusFilter]);
 
+    const handleEdit = (lesson: Lesson) => {
+        setNewLesson({
+            subject: lesson.subject,
+            topic: lesson.topic,
+            date: lesson.date
+        });
+        setEditingId(lesson.id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const cancelEdit = () => {
+        setNewLesson({ subject: '', topic: '', date: new Date().toISOString().split('T')[0] });
+        setEditingId(null);
+    };
+
     const saveLesson = async () => {
         if (!newLesson.subject || !newLesson.topic || !user) return;
-        const id = Date.now().toString();
-        const d = new Date(newLesson.date);
         
-        const addDays = (days: number) => { 
-            const r = new Date(d); 
-            r.setDate(r.getDate() + days); 
-            return r.toISOString().split('T')[0]; 
-        };
+        const id = editingId || Date.now().toString();
+        let lessonData: Lesson;
 
-        const newLessonData: Lesson = {
-            id,
-            subject: newLesson.subject,
-            topic: newLesson.topic,
-            date: newLesson.date,
-            revs: [
-                { name: 'R1', date: addDays(1), done: false },
-                { name: 'R2', date: addDays(7), done: false },
-                { name: 'R3', date: addDays(30), done: false },
-                { name: 'R4', date: addDays(90), done: false }
-            ]
-        };
+        if (editingId) {
+            // Edit Mode: Preserve existing reviews but update metadata
+            const existingLesson = lessons.find(l => l.id === editingId);
+            if (!existingLesson) return;
 
-        await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'lessons', id), newLessonData);
+            lessonData = {
+                ...existingLesson,
+                subject: newLesson.subject,
+                topic: newLesson.topic,
+                date: newLesson.date
+            };
+        } else {
+            // Create Mode: Generate new reviews
+            const d = new Date(newLesson.date);
+            
+            const addDays = (days: number) => { 
+                const r = new Date(d); 
+                r.setDate(r.getDate() + days); 
+                return r.toISOString().split('T')[0]; 
+            };
+
+            lessonData = {
+                id,
+                subject: newLesson.subject,
+                topic: newLesson.topic,
+                date: newLesson.date,
+                revs: [
+                    { name: 'R1', date: addDays(1), done: false },
+                    { name: 'R2', date: addDays(7), done: false },
+                    { name: 'R3', date: addDays(30), done: false },
+                    { name: 'R4', date: addDays(90), done: false }
+                ]
+            };
+        }
+
+        await setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'lessons', id), lessonData);
         setNewLesson({ subject: '', topic: '', date: new Date().toISOString().split('T')[0] });
+        setEditingId(null);
     };
 
     const toggleReview = async (lesson: Lesson, index: number) => {
@@ -119,7 +153,10 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                 </div>
             )}
 
-            <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] shadow-xl border border-slate-100 dark:border-slate-800 grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+            <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] shadow-xl border border-slate-100 dark:border-slate-800 grid grid-cols-1 md:grid-cols-4 gap-6 items-end relative overflow-hidden">
+                {editingId && (
+                    <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500 animate-pulse"></div>
+                )}
                 <div className="space-y-1">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Matéria</label>
                     <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-indigo-100 font-bold border-none shadow-inner" value={newLesson.subject} onChange={e=>setNewLesson({...newLesson, subject: e.target.value})} />
@@ -132,7 +169,14 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Aula</label>
                     <input type="date" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-indigo-100 font-bold border-none shadow-inner" value={newLesson.date} onChange={e=>setNewLesson({...newLesson, date: e.target.value})} />
                 </div>
-                <button onClick={saveLesson} className="bg-indigo-600 text-white font-black py-5 rounded-2xl shadow active:scale-95 transition-all text-xs uppercase tracking-widest hover:opacity-90">Agendar</button>
+                <div className="flex gap-2">
+                    {editingId && (
+                        <button onClick={cancelEdit} className="px-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"><i className="fas fa-times"></i></button>
+                    )}
+                    <button onClick={saveLesson} className="flex-1 bg-indigo-600 text-white font-black py-5 rounded-2xl shadow active:scale-95 transition-all text-xs uppercase tracking-widest hover:opacity-90">
+                        {editingId ? 'Salvar' : 'Agendar'}
+                    </button>
+                </div>
             </div>
             
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-lg border border-slate-100 dark:border-slate-800 space-y-5">
@@ -147,8 +191,8 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl border border-slate-100 dark:border-slate-800 overflow-x-auto">
-                <table className="w-full text-left min-w-[800px]">
+            <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl border border-slate-100 dark:border-slate-800">
+                <table className="w-full text-left">
                     <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">
                         <tr>
                             <th className="px-10 py-6">CONTEÚDO</th>
@@ -156,7 +200,7 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                             <th className="px-2 py-6 text-center">R2</th>
                             <th className="px-2 py-6 text-center">R3</th>
                             <th className="px-2 py-6 text-center">R4</th>
-                            <th className="px-10 text-right">AÇÕES</th>
+                            <th className="px-10 text-right"></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -179,7 +223,14 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                                     </td>
                                 ))}
                                 <td className="px-10 py-10 text-right">
-                                    <button onClick={() => setLessonToDelete(l.id)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-300 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt text-xs"></i></button>
+                                    <div className="flex justify-end gap-3">
+                                        <button onClick={() => handleEdit(l)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-300 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                                            <i className="fas fa-pencil-alt text-xs"></i>
+                                        </button>
+                                        <button onClick={() => setLessonToDelete(l.id)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-300 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+                                            <i className="fas fa-trash-alt text-xs"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

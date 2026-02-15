@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, db, doc, setDoc, deleteDoc } from '../services/firebase';
 import { RoutineActivity } from '../types';
 import { APP_ID, COLOR_LIBRARY, ICON_LIBRARY, COLOR_STYLES } from '../constants';
+import { GoogleGenAI, Type, Schema } from "@google/genai";
 
 interface RoutineViewProps {
     user: User;
@@ -11,8 +12,13 @@ interface RoutineViewProps {
 const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
     const [activeTab, setActiveTab] = useState<'weekday' | 'weekend'>('weekday');
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    
+    // AI States
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
     
     const [newActivity, setNewActivity] = useState<Partial<RoutineActivity>>({ 
         time: '08:00', 
@@ -52,6 +58,84 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    // --- GEMINI AI INTEGRATION ---
+    const generateRoutineWithAI = async () => {
+        if (!aiPrompt.trim() || !user) return;
+        setIsGenerating(true);
+
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            
+            // Define valid values for the model
+            const validColors = COLOR_LIBRARY.map(c => c.value).join(', ');
+            const validIcons = ICON_LIBRARY.join(', ');
+
+            const schema: Schema = {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        time: { type: Type.STRING, description: "Time in HH:MM format (24h)" },
+                        title: { type: Type.STRING, description: "Short title of the activity" },
+                        desc: { type: Type.STRING, description: "Brief description or motivation" },
+                        icon: { type: Type.STRING, description: `Icon class name. MUST be one of: ${validIcons}` },
+                        color: { type: Type.STRING, description: `Color name. MUST be one of: ${validColors}` },
+                        type: { type: Type.STRING, description: "Must be 'weekday' or 'weekend'" }
+                    },
+                    required: ["time", "title", "desc", "icon", "color", "type"]
+                }
+            };
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-3-flash-preview',
+                contents: `Create a study routine based on this request: "${aiPrompt}". 
+                The user wants this for the '${activeTab}'. 
+                Ensure the 'type' field matches '${activeTab}'.
+                Be realistic with times.`,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                    systemInstruction: `You are an expert study planner. 
+                    Use the provided icons and colors to categorize activities logically (e.g., 'fa-coffee' for breaks, 'fa-book' for study).
+                    Available icons: ${validIcons}.
+                    Available colors: ${validColors}.`
+                }
+            });
+
+            // Clean up Markdown formatting if present (e.g., ```json ... ```)
+            let jsonText = response.text || "[]";
+            if (jsonText.startsWith("```")) {
+                jsonText = jsonText.replace(/^```(json)?\s*/, "").replace(/\s*```$/, "");
+            }
+
+            const generatedActivities = JSON.parse(jsonText);
+
+            // Batch save to Firestore
+            const batchPromises = generatedActivities.map(async (activity: any) => {
+                const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                // Ensure valid fallback if AI hallucinates
+                const safeActivity = {
+                    ...activity,
+                    id,
+                    icon: ICON_LIBRARY.includes(activity.icon) ? activity.icon : 'fa-book',
+                    color: COLOR_LIBRARY.some(c => c.value === activity.color) ? activity.color : 'indigo'
+                };
+                return setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'routine', id), safeActivity);
+            });
+
+            await Promise.all(batchPromises);
+            
+            setAiPrompt('');
+            setIsAIModalOpen(false);
+
+        } catch (error) {
+            console.error("Error generating routine:", error);
+            alert("Desculpe, não consegui criar a rotina agora. Verifique sua chave de API ou tente novamente.");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     return (
         <div className="space-y-8 animate-in relative">
             {/* Delete Confirmation Modal */}
@@ -83,13 +167,75 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                 </div>
             )}
 
-            <button 
-                onClick={() => setIsFormOpen(true)} 
-                className="w-full p-8 bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] text-slate-400 dark:text-slate-600 font-bold hover:border-indigo-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-3 group"
-            >
-                <i className="fas fa-plus-circle group-hover:scale-110 transition-transform"></i> 
-                Criar Atividade Personalizada
-            </button>
+            {/* AI Generator Modal */}
+            {isAIModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in">
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl max-w-md w-full border border-slate-100 dark:border-slate-800 space-y-5 relative overflow-hidden">
+                        {/* Background Decoration */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                        
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                                <i className="fas fa-wand-magic-sparkles text-2xl animate-pulse"></i>
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white">Criar com IA</h3>
+                            <p className="text-slate-500 text-sm mt-2">Descreva sua rotina ideal e deixe a inteligência artificial organizar seu dia.</p>
+                        </div>
+
+                        <textarea 
+                            className="w-full h-32 p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/50 border-none resize-none text-sm font-medium placeholder-slate-400 shadow-inner"
+                            placeholder="Ex: Quero acordar às 7h, estudar matemática de manhã, ir para a academia antes do almoço e revisar inglês à noite."
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
+                        ></textarea>
+
+                        <div className="flex gap-3 pt-2">
+                            <button 
+                                onClick={() => setIsAIModalOpen(false)}
+                                className="flex-1 py-4 rounded-2xl font-bold text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-widest"
+                                disabled={isGenerating}
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={generateRoutineWithAI}
+                                disabled={isGenerating || !aiPrompt.trim()}
+                                className="flex-1 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isGenerating ? (
+                                    <><i className="fas fa-circle-notch fa-spin"></i> Criando...</>
+                                ) : (
+                                    <><i className="fas fa-bolt"></i> Gerar</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className="space-y-4">
+                <button 
+                    onClick={() => setIsAIModalOpen(true)} 
+                    className="w-full p-6 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-[2.5rem] text-white shadow-lg shadow-indigo-200 dark:shadow-none hover:shadow-xl hover:scale-[1.01] transition-all relative overflow-hidden group flex items-center justify-between px-8"
+                >
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl group-hover:bg-white/20 transition-colors"></div>
+                    <div className="relative text-left">
+                        <span className="block text-xl font-black mb-0.5">Crie uma rotina com IA</span>
+                        <span className="text-indigo-100 text-xs font-medium">Gere automaticamente seu cronograma de estudos</span>
+                    </div>
+                    <div className="relative w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                        <i className="fas fa-wand-magic-sparkles text-xl"></i>
+                    </div>
+                </button>
+
+                <button 
+                    onClick={() => setIsFormOpen(true)} 
+                    className="w-full p-5 bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] text-slate-400 dark:text-slate-600 font-bold hover:border-slate-400 hover:text-slate-600 dark:hover:text-slate-400 transition-all flex items-center justify-center gap-3 group"
+                >
+                    <i className="fas fa-plus-circle text-indigo-500 group-hover:scale-110 transition-transform"></i> 
+                    Adicionar nova atividade
+                </button>
+            </div>
             
             {isFormOpen && (
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] shadow-xl space-y-6 animate-in border border-slate-100 dark:border-slate-800">
