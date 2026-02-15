@@ -9,7 +9,9 @@ import {
     collection, 
     onSnapshot, 
     doc, 
-    setDoc 
+    setDoc,
+    DocumentSnapshot,
+    QuerySnapshot 
 } from './services/firebase';
 import { APP_ID } from './constants';
 import { Lesson, RoutineActivity, ViewState } from './types';
@@ -67,20 +69,20 @@ const App = () => {
         if (!user) return;
 
         // Listen for preferences
-        const unsubPrefs = onSnapshot(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'preferences'), (docSnap) => {
-            if (docSnap.exists()) {
+        const unsubPrefs = onSnapshot(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'preferences'), (docSnap: DocumentSnapshot) => {
+            if (docSnap.exists) {
                 const data = docSnap.data();
-                if (data.isDarkMode !== undefined) setIsDarkMode(data.isDarkMode);
+                if (data && data.isDarkMode !== undefined) setIsDarkMode(data.isDarkMode);
             }
         });
 
         // Listen for lessons
-        const unsubLessons = onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'lessons'), (s) => {
+        const unsubLessons = onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'lessons'), (s: QuerySnapshot) => {
             setLessons(s.docs.map(d => ({ id: d.id, ...d.data() } as Lesson)).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         });
 
         // Listen for routine
-        const unsubRoutine = onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'routine'), (s) => {
+        const unsubRoutine = onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'routine'), (s: QuerySnapshot) => {
             setRoutine(s.docs.map(d => ({ id: d.id, ...d.data() } as RoutineActivity)).sort((a,b) => a.time.localeCompare(b.time)));
         });
 

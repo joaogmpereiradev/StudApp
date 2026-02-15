@@ -31,6 +31,8 @@ try {
 
 // Export Types
 export type User = firebase.User;
+export type DocumentSnapshot = firebase.firestore.DocumentSnapshot;
+export type QuerySnapshot = firebase.firestore.QuerySnapshot;
 
 // Auth Adapters
 export const signInWithPopup = (authInstance: firebase.auth.Auth, provider: firebase.auth.AuthProvider) => authInstance.signInWithPopup(provider);
