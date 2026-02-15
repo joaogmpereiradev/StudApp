@@ -19,7 +19,9 @@ const AuthScreen: React.FC = () => {
             
             if (e?.code === 'auth/popup-closed-by-user') msg = "Login cancelado.";
             else if (e?.code === 'auth/popup-blocked') msg = "Popup bloqueado. Permita popups para este site.";
-            else if (e?.code === 'auth/unauthorized-domain') msg = "Domínio não autorizado no Firebase Console.";
+            else if (e?.code === 'auth/unauthorized-domain') {
+                msg = `Domínio não autorizado: "${window.location.hostname}". Adicione-o no Firebase Console > Auth > Settings.`;
+            }
             else if (e?.code === 'auth/operation-not-supported-in-this-environment') msg = "Ambiente não suportado (Verifique se está usando http/https).";
             else if (e?.message) msg = `Erro: ${e.message}`;
             
