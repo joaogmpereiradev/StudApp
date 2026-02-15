@@ -50,7 +50,7 @@ const AuthScreen: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6">
             <div className="w-full max-w-md bg-white dark:bg-slate-900 p-10 rounded-[3rem] shadow-lg border border-slate-100 dark:border-slate-800 animate-in">
                 <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center mb-6 mx-auto shadow-md rotate-3">
                     <i className="fas fa-graduation-cap text-white text-3xl"></i>

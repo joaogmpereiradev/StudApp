@@ -273,18 +273,18 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
             {/* Delete Single Item Modal */}
             {itemToDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in">
-                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800 text-center space-y-4">
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl max-w-sm w-full border border-slate-200 dark:border-slate-800 text-center space-y-4">
                         <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-2">
                             <i className="fas fa-trash-alt text-2xl"></i>
                         </div>
                         <div>
                             <h3 className="text-xl font-black text-slate-900 dark:text-white">Excluir Atividade?</h3>
-                            <p className="text-slate-500 text-sm mt-2">Essa ação não pode ser desfeita. Tem certeza que deseja remover este item?</p>
+                            <p className="text-slate-600 text-sm mt-2">Essa ação não pode ser desfeita. Tem certeza que deseja remover este item?</p>
                         </div>
                         <div className="flex gap-3 pt-4">
                             <button 
                                 onClick={() => setItemToDelete(null)}
-                                className="flex-1 py-4 rounded-2xl font-bold text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-widest"
+                                className="flex-1 py-4 rounded-2xl font-bold text-slate-600 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-widest"
                             >
                                 Cancelar
                             </button>
@@ -310,14 +310,14 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                             <h3 className="text-xl font-black text-slate-900 dark:text-white">
                                 Excluir Rotina de {activeTab === 'weekday' ? 'Semana' : 'Fim de Semana'}?
                             </h3>
-                            <p className="text-slate-500 text-sm mt-2">
+                            <p className="text-slate-600 text-sm mt-2">
                                 Você está prestes a apagar <strong>todas</strong> as atividades desta lista. Isso não pode ser desfeito.
                             </p>
                         </div>
                         <div className="flex gap-3 pt-4">
                             <button 
                                 onClick={() => setIsDeletingAll(false)}
-                                className="flex-1 py-4 rounded-2xl font-bold text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-widest"
+                                className="flex-1 py-4 rounded-2xl font-bold text-slate-600 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-widest"
                             >
                                 Cancelar
                             </button>
@@ -335,7 +335,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
             {/* AI Generator Modal */}
             {isAIModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in">
-                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl max-w-md w-full border border-slate-100 dark:border-slate-800 space-y-5 relative overflow-hidden">
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 space-y-5 relative overflow-hidden">
                         {/* Background Decoration */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
                         
@@ -346,7 +346,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                             <h3 className="text-2xl font-black text-slate-900 dark:text-white">
                                 {routine.length > 0 ? "Editar com IA" : "Criar com IA"}
                             </h3>
-                            <p className="text-slate-500 text-sm mt-2">Descreva sua rotina ideal e deixe a inteligência artificial organizar seu dia.</p>
+                            <p className="text-slate-600 text-sm mt-2">Descreva sua rotina ideal e deixe a inteligência artificial organizar seu dia.</p>
                         </div>
 
                         <div className="relative">
@@ -377,7 +377,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                                     if(isRecording && recognitionRef.current) recognitionRef.current.stop();
                                     setIsRecording(false);
                                 }}
-                                className="flex-1 py-4 rounded-2xl font-bold text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-widest"
+                                className="flex-1 py-4 rounded-2xl font-bold text-slate-600 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-widest"
                                 disabled={isGenerating}
                             >
                                 Cancelar
@@ -423,7 +423,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                         setEditingId(null);
                         setIsFormOpen(true);
                     }} 
-                    className="w-full p-5 bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] text-slate-400 dark:text-slate-600 font-bold hover:border-slate-400 hover:text-slate-600 dark:hover:text-slate-400 transition-all flex items-center justify-center gap-3 group"
+                    className="w-full p-5 bg-white dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-[2rem] text-slate-500 dark:text-slate-600 font-bold hover:border-slate-400 hover:text-slate-700 dark:hover:text-slate-400 transition-all flex items-center justify-center gap-3 group"
                 >
                     <i className="fas fa-plus-circle text-indigo-500 group-hover:scale-110 transition-transform"></i> 
                     Adicionar nova atividade
@@ -431,8 +431,8 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
             </div>
             
             {isFormOpen && (
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] shadow-xl space-y-6 animate-in border border-slate-100 dark:border-slate-800">
-                    <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4 text-slate-400">
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] shadow-xl space-y-6 animate-in border border-slate-200 dark:border-slate-800">
+                    <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-4 text-slate-400">
                         <h2 className="text-xs font-black uppercase tracking-widest">
                             {editingId ? "Edição de Atividade" : "Nova Atividade"}
                         </h2>
@@ -442,21 +442,21 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Horário</label>
+                            <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 ml-1">Horário</label>
                             <input type="time" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none font-bold" value={newActivity.time} onChange={e=>setNewActivity({...newActivity, time: e.target.value})} />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Atividade</label>
+                            <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 ml-1">Atividade</label>
                             <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none font-bold placeholder-slate-400" value={newActivity.title} onChange={e=>setNewActivity({...newActivity, title: e.target.value})} placeholder="Ex: Café da manhã" />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Detalhes</label>
+                            <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 ml-1">Detalhes</label>
                             <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none font-bold placeholder-slate-400" value={newActivity.desc} onChange={e=>setNewActivity({...newActivity, desc: e.target.value})} placeholder="Ex: Pão com ovos e café" />
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
                         <div className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Marcador</p>
+                            <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Marcador</p>
                             <div className="flex flex-wrap gap-3">
                                 {COLOR_LIBRARY.map(c => (
                                     <button 
@@ -469,13 +469,13 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                             </div>
                         </div>
                         <div className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ícone</p>
+                            <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Ícone</p>
                             <div className="grid grid-cols-6 gap-2">
                                 {ICON_LIBRARY.map(ic => (
                                     <button 
                                         key={ic} 
                                         onClick={() => setNewActivity({...newActivity, icon: ic})} 
-                                        className={`w-11 h-11 rounded-2xl transition-all ${newActivity.icon === ic ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                                        className={`w-11 h-11 rounded-2xl transition-all ${newActivity.icon === ic ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 dark:text-slate-600 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                                     >
                                         <i className={`fas ${ic}`}></i>
                                     </button>
@@ -483,23 +483,23 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                             </div>
                         </div>
                     </div>
-                    <button onClick={saveActivity} className="w-full bg-slate-900 dark:bg-indigo-600 text-white font-black py-5 rounded-3xl shadow active:scale-95 transition-all text-xs uppercase tracking-widest hover:opacity-90">Salvar</button>
+                    <button onClick={saveActivity} className="w-full bg-indigo-600 text-white font-black py-5 rounded-3xl shadow active:scale-95 transition-all text-xs uppercase tracking-widest hover:opacity-90">Salvar</button>
                 </div>
             )}
 
             <div className="flex gap-2 p-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <button onClick={() => setActiveTab('weekday')} className={`flex-1 py-3.5 rounded-xl text-xs font-black transition-all ${activeTab === 'weekday' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>SEMANA</button>
-                <button onClick={() => setActiveTab('weekend')} className={`flex-1 py-3.5 rounded-xl text-xs font-black transition-all ${activeTab === 'weekend' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>FIM DE SEMANA</button>
+                <button onClick={() => setActiveTab('weekday')} className={`flex-1 py-3.5 rounded-xl text-xs font-black transition-all ${activeTab === 'weekday' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>SEMANA</button>
+                <button onClick={() => setActiveTab('weekend')} className={`flex-1 py-3.5 rounded-xl text-xs font-black transition-all ${activeTab === 'weekend' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>FIM DE SEMANA</button>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800 transition-colors">
+            <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors">
                 <table className="w-full text-left table-fixed">
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                         {groupedRoutine.length === 0 ? (
                             <tr><td className="px-12 py-24 text-center text-slate-400 italic font-bold leading-relaxed">Lista vazia. Crie atividades para adicionar a sua rotina semanal 🚀</td></tr>
                         ) : groupedRoutine.map(({ time, items }) => (
                             <tr key={time} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all">
-                                <td className="px-4 md:px-10 py-10 text-lg font-black text-slate-800 dark:text-slate-300 w-24 md:w-32 align-top">{time}</td>
+                                <td className="px-4 md:px-10 py-10 text-lg font-black text-slate-900 dark:text-slate-300 w-24 md:w-32 align-top">{time}</td>
                                 <td className="px-4 md:px-10 py-10">
                                     <div className="flex flex-col gap-6">
                                         {items.map((item, index) => (
@@ -508,7 +508,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                                                 {index > 0 && (
                                                     <div className="flex items-center gap-4 py-4 opacity-50">
                                                         <div className="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">OU</span>
+                                                        <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest bg-slate-200 dark:bg-slate-800 px-3 py-1 rounded-full">OU</span>
                                                         <div className="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
                                                     </div>
                                                 )}
@@ -520,14 +520,14 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                                                             <span className="truncate">{item.title}</span>
                                                         </span>
                                                         {item.desc && (
-                                                            <span className="text-sm text-slate-500 dark:text-slate-600 font-medium italic break-words w-full md:w-auto pl-1 md:pl-0">
+                                                            <span className="text-sm text-slate-700 dark:text-slate-500 font-medium italic break-words w-full md:w-auto pl-1 md:pl-0">
                                                                 {item.desc}
                                                             </span>
                                                         )}
                                                     </div>
                                                     <div className="flex gap-3 shrink-0 self-end md:self-auto">
-                                                        <button onClick={() => handleEdit(item)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-xs"></i></button>
-                                                        <button onClick={() => setItemToDelete(item.id)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt text-xs"></i></button>
+                                                        <button onClick={() => handleEdit(item)} className="w-11 h-11 flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-xs"></i></button>
+                                                        <button onClick={() => setItemToDelete(item.id)} className="w-11 h-11 flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt text-xs"></i></button>
                                                     </div>
                                                 </div>
                                             </div>

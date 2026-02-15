@@ -127,7 +127,7 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
             {/* Delete Confirmation Modal */}
             {lessonToDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in">
-                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800 text-center space-y-4">
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl max-w-sm w-full border border-slate-200 dark:border-slate-800 text-center space-y-4">
                         <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-2">
                             <i className="fas fa-trash-alt text-2xl"></i>
                         </div>
@@ -138,7 +138,7 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                         <div className="flex gap-3 pt-4">
                             <button 
                                 onClick={() => setLessonToDelete(null)}
-                                className="flex-1 py-4 rounded-2xl font-bold text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-widest"
+                                className="flex-1 py-4 rounded-2xl font-bold text-slate-600 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xs uppercase tracking-widest"
                             >
                                 Cancelar
                             </button>
@@ -153,20 +153,20 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                 </div>
             )}
 
-            <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] shadow-xl border border-slate-100 dark:border-slate-800 grid grid-cols-1 md:grid-cols-4 gap-6 items-end relative overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] shadow-xl border border-slate-200 dark:border-slate-800 grid grid-cols-1 md:grid-cols-4 gap-6 items-end relative overflow-hidden">
                 {editingId && (
                     <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500 animate-pulse"></div>
                 )}
                 <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Matéria</label>
+                    <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Matéria</label>
                     <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-indigo-100 font-bold border-none shadow-inner" value={newLesson.subject} onChange={e=>setNewLesson({...newLesson, subject: e.target.value})} />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assunto</label>
+                    <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Assunto</label>
                     <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-indigo-100 font-bold border-none shadow-inner" value={newLesson.topic} onChange={e=>setNewLesson({...newLesson, topic: e.target.value})} />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Aula</label>
+                    <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Aula</label>
                     <input type="date" className="w-full p-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-indigo-100 font-bold border-none shadow-inner" value={newLesson.date} onChange={e=>setNewLesson({...newLesson, date: e.target.value})} />
                 </div>
                 <div className="flex gap-2">
@@ -179,22 +179,22 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                 </div>
             </div>
             
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-lg border border-slate-100 dark:border-slate-800 space-y-5">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-lg border border-slate-200 dark:border-slate-800 space-y-5">
                 <div className="relative">
-                    <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                    <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
                     <input type="text" placeholder="Filtrar por nome ou matéria..." className="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl outline-none text-sm font-bold border-none placeholder-slate-400" value={searchText} onChange={e => setSearchText(e.target.value)} />
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {[{id:'all',label:'Todas'},{id:'today',label:'Hoje'},{id:'overdue',label:'Atrasadas'},{id:'done',label:'Concluídas'},{id:'future',label:'Futuras'}].map(f=>(
-                        <button key={f.id} onClick={()=>setStatusFilter(f.id)} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${statusFilter===f.id?'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600 shadow-md':'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{f.label}</button>
+                        <button key={f.id} onClick={()=>setStatusFilter(f.id)} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${statusFilter===f.id?'bg-indigo-600 text-white border-indigo-600 shadow-md':'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{f.label}</button>
                     ))}
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left min-w-[700px] md:min-w-0">
-                        <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">
+                        <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black uppercase text-slate-500 dark:text-slate-500 border-b border-slate-200 dark:border-slate-800">
                             <tr>
                                 <th className="px-10 py-6">CONTEÚDO</th>
                                 <th className="px-2 py-6 text-center">R1</th>
@@ -204,14 +204,14 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                                 <th className="px-10 text-right"></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                             {filteredLessons.length === 0 ? (
-                                <tr><td colSpan={6} className="px-10 py-24 text-center text-slate-300 dark:text-slate-700 font-bold italic">Nada agendado 🎓</td></tr>
+                                <tr><td colSpan={6} className="px-10 py-24 text-center text-slate-400 dark:text-slate-700 font-bold italic">Nada agendado 🎓</td></tr>
                             ) : filteredLessons.map(l => (
                                 <tr key={l.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                                     <td className="px-10 py-10">
-                                        <p className="text-sm font-black text-slate-800 dark:text-slate-300 mb-1 leading-none">{l.subject}</p>
-                                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-tighter">{l.topic}</p>
+                                        <p className="text-sm font-black text-slate-900 dark:text-slate-300 mb-1 leading-none">{l.subject}</p>
+                                        <p className="text-[10px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-tighter">{l.topic}</p>
                                     </td>
                                     {l.revs && l.revs.map((r, i) => (
                                         <td key={i} className="px-2 py-10 text-center">
@@ -225,10 +225,10 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                                     ))}
                                     <td className="px-10 py-10 text-right">
                                         <div className="flex justify-end gap-3">
-                                            <button onClick={() => handleEdit(l)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-300 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                                            <button onClick={() => handleEdit(l)} className="w-11 h-11 flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
                                                 <i className="fas fa-pencil-alt text-xs"></i>
                                             </button>
-                                            <button onClick={() => setLessonToDelete(l.id)} className="w-11 h-11 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-300 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+                                            <button onClick={() => setLessonToDelete(l.id)} className="w-11 h-11 flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm">
                                                 <i className="fas fa-trash-alt text-xs"></i>
                                             </button>
                                         </div>
@@ -240,7 +240,7 @@ const ReviewsView: React.FC<ReviewsViewProps> = ({ user, lessons }) => {
                 </div>
             </div>
             
-            <div className="flex flex-wrap justify-center gap-8 py-8 px-10 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-slate-800 mt-8 animate-in transition-colors">
+            <div className="flex flex-wrap justify-center gap-8 py-8 px-10 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-200 dark:border-slate-800 mt-8 animate-in transition-colors">
                 <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-full bg-amber-100 border-2 border-amber-400 animate-pulse-soft"></div><span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Hoje</span></div>
                 <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-full bg-rose-100 border-2 border-rose-400"></div><span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Atrasada</span></div>
                 <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-full bg-emerald-100 border-2 border-emerald-400"></div><span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Concluída</span></div>

@@ -1,24 +1,15 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="color-scheme" content="light dark">
-    <meta name="theme-color" content="#f8fafc"> 
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#020617"> 
     
     <title>StudApp | Performance nos Estudos</title>
     <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/240/graduation-cap.png">
     <link rel="manifest" href="/manifest.json">
     
-    <script>
-        // Init Dark Mode
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    </script>
-
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -26,6 +17,11 @@
                 extend: {
                     animation: {
                         'pulse-soft': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    colors: {
+                        slate: {
+                            950: '#020617', // Ensure 950 is available if using older Tailwind versions
+                        }
                     }
                 }
             }
@@ -37,12 +33,17 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
-        body { font-family: 'Inter', sans-serif; }
+        /* Aplica as cores do Modo Escuro via CSS nativo permanentemente */
+        body { 
+            font-family: 'Inter', sans-serif;
+            background-color: #020617 !important; /* slate-950 */
+            color: #ffffff !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
         
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .dark ::-webkit-scrollbar-thumb { background: #334155; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
         /* Animation Utilities */
         .animate-in { animation: fadeIn 0.4s ease-out; }
@@ -74,7 +75,7 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
+<body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>
