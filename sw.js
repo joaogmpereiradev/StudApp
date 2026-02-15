@@ -1,14 +1,11 @@
-const CACHE_NAME = 'studapp-v4';
-const DYNAMIC_CACHE = 'studapp-dynamic-v4';
+const CACHE_NAME = 'studapp-v6';
+const DYNAMIC_CACHE = 'studapp-dynamic-v6';
 
-// Lista de arquivos essenciais para o funcionamento offline.
-// Incluímos explicitamente os arquivos fonte (.tsx) porque neste ambiente
-// o navegador baixa os módulos individualmente.
+// Arquivos para cache na instalação
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
-  // Código Fonte (Essencial para carregar a lógica offline neste ambiente)
   './index.tsx',
   './App.tsx',
   './types.ts',
@@ -17,12 +14,10 @@ const ASSETS_TO_CACHE = [
   './components/AuthScreen.tsx',
   './components/RoutineView.tsx',
   './components/ReviewsView.tsx',
-  // CDNs Críticos
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
 ];
 
-// Instalação: Baixa e salva todos os arquivos listados
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -30,7 +25,7 @@ self.addEventListener('install', (event) => {
       return Promise.all(
         ASSETS_TO_CACHE.map(url => {
           return cache.add(url).catch(err => {
-            console.warn('Falha ao cachear recurso na instalação:', url, err);
+            console.warn('Falha no precache:', url);
           });
         })
       );
@@ -38,7 +33,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Ativação: Limpa caches antigos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(
@@ -51,18 +45,24 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Intercepta requisições
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  let url;
+  try {
+    url = new URL(event.request.url);
+  } catch (e) {
+    // Se a URL for inválida (ex: data:, blob: ou algo estranho), ignoramos
+    return;
+  }
 
-  // 1. Ignorar APIs de dados (Firebase/Google)
+  // 1. Ignorar APIs externas de dados (Firestore, Google AI, Auth)
+  // Permitimos esm.sh para cachear as bibliotecas JS
   if (url.hostname.includes('googleapis.com') || 
       url.hostname.includes('firestore') ||
       (url.hostname.includes('firebase') && !url.hostname.includes('esm.sh'))) {
     return;
   }
 
-  // 2. Requisições de Navegação (HTML) -> Network First, Fallback to Cache
+  // 2. Navegação (HTML) -> Network First com fallback para Cache ou Index
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -77,7 +77,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Ativos e Scripts -> Cache First
+  // 3. Cache First para todo o resto (JS, CSS, Imagens)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -90,9 +90,18 @@ self.addEventListener('fetch', (event) => {
           return response;
         }
 
+        // Não cachear requisições POST/PUT etc
+        if (event.request.method !== 'GET') {
+            return response;
+        }
+
         const responseToCache = response.clone();
         caches.open(DYNAMIC_CACHE).then((cache) => {
-          cache.put(event.request, responseToCache);
+            try {
+                cache.put(event.request, responseToCache);
+            } catch (err) {
+                // Ignora erros de quota
+            }
         });
 
         return response;

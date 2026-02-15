@@ -7,7 +7,20 @@
     <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/240/graduation-cap.png">
     <link rel="manifest" href="/manifest.json">
     
-    <!-- Tailwind via CDN mantido para estilização rápida sem configuração de CSS extra -->
+    <!-- Configuração do Tailwind DEVE vir antes do script CDN para aplicar 'darkMode: class' -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    animation: {
+                        'pulse-soft': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
@@ -24,29 +37,18 @@
         .animate-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     </style>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    animation: {
-                        'pulse-soft': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
-                }
-            }
-        }
-    </script>
+    
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // CORREÇÃO CRÍTICA:
-                // Constrói a URL do Service Worker baseada na localização atual da janela (iframe).
-                // Isso ignora qualquer tag <base> ou configuração de ambiente que aponte para 'ai.studio'.
-                const swUrl = new URL('sw.js', window.location.href).href;
+                // CORREÇÃO: Usa window.location.href como base absoluta para o sw.js.
+                // Isso resolve corretamente o caminho relativo './sw.js' para uma URL absoluta,
+                // ignorando tags <base> conflitantes e evitando erros de concatenação de string.
+                const swUrl = new URL('./sw.js', window.location.href).href;
                 
                 navigator.serviceWorker.register(swUrl)
-                    .then(reg => console.log('Service Worker registrado com sucesso:', reg.scope))
-                    .catch(err => console.error('Falha ao registrar Service Worker:', err));
+                    .then(reg => console.log('Service Worker registrado:', reg.scope))
+                    .catch(err => console.error('Service Worker Error:', err));
             });
         }
     </script>
