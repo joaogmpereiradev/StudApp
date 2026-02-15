@@ -18,6 +18,7 @@ import { Lesson, RoutineActivity, ViewState } from './types';
 import AuthScreen from './components/AuthScreen';
 import RoutineView from './components/RoutineView';
 import ReviewsView from './components/ReviewsView';
+import * as XLSX from 'xlsx';
 
 const App = () => {
     const [user, setUser] = useState<User | null>(null);
@@ -62,16 +63,26 @@ const App = () => {
         return () => unsubscribe();
     }, []);
 
-    // Dark Mode Effect
+    // Dark Mode Effect & Mobile Status Bar Color Fix
     useEffect(() => {
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        
         if (isDarkMode) {
             document.documentElement.classList.add('dark');
+            // Remove classes from body to let Tailwind handle global background via root div
+            // But keep consistency just in case
             document.body.classList.add('bg-slate-950');
             document.body.classList.remove('bg-slate-50');
+            
+            // Fix Mobile Chrome/Safari Status Bar
+            if (metaThemeColor) metaThemeColor.setAttribute('content', '#020617'); // slate-950
         } else {
             document.documentElement.classList.remove('dark');
             document.body.classList.add('bg-slate-50');
             document.body.classList.remove('bg-slate-950');
+            
+            // Fix Mobile Chrome/Safari Status Bar
+            if (metaThemeColor) metaThemeColor.setAttribute('content', '#f8fafc'); // slate-50
         }
         
         if (user) {
@@ -148,6 +159,62 @@ const App = () => {
         }
     };
 
+    const handleBackup = () => {
+        try {
+            // 1. Formatar dados da Rotina
+            const routineData = routine.map(r => ({
+                Horario: r.time,
+                Tipo: r.type === 'weekday' ? 'Semana' : 'Fim de Semana',
+                Atividade: r.title,
+                Descricao: r.desc || '',
+                Cor: r.color,
+                Icone: r.icon
+            }));
+
+            // 2. Formatar dados das Revisões
+            const reviewsData = lessons.map(l => {
+                const row: any = {
+                    Materia: l.subject,
+                    Assunto: l.topic,
+                    Data_Original: l.date
+                };
+                
+                // Adiciona colunas para cada revisão (R1, R2, etc)
+                if (l.revs) {
+                    l.revs.forEach((r, idx) => {
+                        row[`R${idx + 1}_Data`] = r.date;
+                        row[`R${idx + 1}_Feito`] = r.done ? 'Sim' : 'Não';
+                    });
+                }
+                return row;
+            });
+
+            // 3. Criar Workbook e Sheets
+            const wb = XLSX.utils.book_new();
+            
+            const wsRoutine = XLSX.utils.json_to_sheet(routineData);
+            const wsReviews = XLSX.utils.json_to_sheet(reviewsData);
+
+            // Ajustar larguras das colunas (opcional, mas bom para UX)
+            const wscolsRoutine = [{wch:10}, {wch:15}, {wch:25}, {wch:30}, {wch:10}];
+            wsRoutine['!cols'] = wscolsRoutine;
+
+            XLSX.utils.book_append_sheet(wb, wsRoutine, "Minha Rotina");
+            XLSX.utils.book_append_sheet(wb, wsReviews, "Minhas Revisões");
+
+            // 4. Salvar arquivo
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Backup_StudApp_${dateStr}.xlsx`);
+            
+            setIsSettingsOpen(false);
+            alert("Backup baixado com sucesso!");
+
+        } catch (error) {
+            console.error("Erro ao gerar backup:", error);
+            alert("Erro ao gerar arquivo de backup.");
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-400">
@@ -170,6 +237,10 @@ const App = () => {
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full text-left px-5 py-4 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
                 <i className={`fas ${isDarkMode ? 'fa-sun text-amber-500' : 'fa-moon text-indigo-500'}`}></i> 
                 {isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
+            </button>
+            
+            <button onClick={handleBackup} className="w-full text-left px-5 py-4 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                <i className="fas fa-file-excel text-emerald-500"></i> Fazer Backup (Excel)
             </button>
             
             <button onClick={handleOpenPasswordReset} className="w-full text-left px-5 py-4 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">

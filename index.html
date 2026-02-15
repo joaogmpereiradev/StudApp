@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Meta tag essencial para dizer ao navegador mobile que o site suporta light/dark mode -->
+    <meta name="color-scheme" content="light dark">
+    <!-- A cor da barra de status será controlada via JS no App.tsx -->
+    <meta name="theme-color" content="#f8fafc"> 
+    
     <title>StudApp | Performance nos Estudos</title>
     <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/240/graduation-cap.png">
     <link rel="manifest" href="/manifest.json">
@@ -41,11 +46,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // CORREÇÃO: Usa window.location.href como base absoluta para o sw.js.
-                // Isso resolve corretamente o caminho relativo './sw.js' para uma URL absoluta,
-                // ignorando tags <base> conflitantes e evitando erros de concatenação de string.
                 const swUrl = new URL('./sw.js', window.location.href).href;
-                
                 navigator.serviceWorker.register(swUrl)
                     .then(reg => console.log('Service Worker registrado:', reg.scope))
                     .catch(err => console.error('Service Worker Error:', err));
@@ -60,6 +61,7 @@
     "react/": "https://esm.sh/react@^19.2.4/",
     "firebase/": "https://esm.sh/firebase@^12.9.0/",
     "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+    "xlsx": "https://esm.sh/xlsx@0.18.5",
     "vite": "https://esm.sh/vite@^7.3.1",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4"
   }
