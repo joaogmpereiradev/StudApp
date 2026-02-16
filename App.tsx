@@ -27,16 +27,6 @@ const App = () => {
     const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     
-    // Theme State
-    const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('theme');
-            if (saved) return saved as 'light' | 'dark';
-            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-        return 'dark';
-    });
-    
     const mobileSettingsRef = useRef<HTMLDivElement>(null);
     const desktopSettingsRef = useRef<HTMLDivElement>(null);
 
@@ -56,21 +46,16 @@ const App = () => {
         };
     }, []);
 
-    // Theme Effect
+    // Enforce Dark Mode
     useEffect(() => {
         const root = window.document.documentElement;
-        if (theme === 'dark') {
-            root.classList.add('dark');
-        } else {
-            root.classList.remove('dark');
-        }
-        localStorage.setItem('theme', theme);
-    }, [theme]);
-
-    const toggleTheme = () => {
-        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-        setIsSettingsOpen(false);
-    };
+        root.classList.add('dark');
+        root.style.colorScheme = 'dark';
+        
+        // Ensure meta theme-color matches dark mode
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        if (metaThemeColor) metaThemeColor.setAttribute('content', '#020617');
+    }, []);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -195,18 +180,13 @@ const App = () => {
         return <AuthScreen />;
     }
 
-    const SettingsMenuContent = () => (
+    const renderSettingsMenu = () => (
         <>
             <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30">
                 <p className="text-[10px] uppercase font-black tracking-widest text-slate-500 mb-1">Logado como</p>
                 <p className="text-xs font-bold text-slate-900 dark:text-slate-200 truncate">{user.email}</p>
             </div>
             
-            <button onClick={toggleTheme} className="w-full text-left px-5 py-4 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 transition-colors">
-                <i className={`fas ${theme === 'dark' ? 'fa-sun text-amber-400' : 'fa-moon text-indigo-500'} w-4 text-center`}></i> 
-                {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
-            </button>
-
             <button onClick={handleBackup} className="w-full text-left px-5 py-4 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 transition-colors">
                 <i className="fas fa-file-excel text-emerald-500 w-4 text-center"></i> Fazer Backup (Excel)
             </button>
@@ -277,7 +257,7 @@ const App = () => {
                             </button>
                             {isSettingsOpen && (
                                 <div className="absolute top-full right-0 mt-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 min-w-[240px] overflow-hidden">
-                                    <SettingsMenuContent />
+                                    {renderSettingsMenu()}
                                 </div>
                             )}
                         </div>
@@ -295,7 +275,7 @@ const App = () => {
                             </button>
                             {isSettingsOpen && (
                                 <div className="absolute top-full right-0 mt-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 min-w-[240px] overflow-hidden">
-                                    <SettingsMenuContent />
+                                    {renderSettingsMenu()}
                                 </div>
                             )}
                         </div>
