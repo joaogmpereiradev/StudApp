@@ -172,8 +172,9 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
         if (!aiPrompt.trim() || !user) return;
         
         // 1. Validate API Key Check
+        // A chave é injetada pelo Vite a partir do arquivo .env
         if (!process.env.API_KEY) {
-            alert("ERRO: A chave de API do Gemini (API_KEY) não foi encontrada. Verifique as variáveis de ambiente na Vercel ou no arquivo .env.");
+            alert("ERRO: A API Key não foi encontrada.\n\n1. Crie um arquivo chamado '.env' na raiz do projeto.\n2. Adicione a linha: API_KEY=sua_chave_aqui\n3. Reinicie o servidor.");
             return;
         }
 
@@ -202,7 +203,7 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
                         color: { type: Type.STRING, description: `Color name. MUST be one of: ${validColors}` },
                         type: { type: Type.STRING, description: "Must be 'weekday' or 'weekend'" }
                     },
-                    // 2. Relaxed Schema: Removed 'desc' and 'type' from required to prevent 400 errors if model omits them
+                    // Relaxed Schema: Removed 'desc' and 'type' from required to prevent 400 errors if model omits them
                     required: ["time", "title", "icon", "color"]
                 }
             };
@@ -270,9 +271,25 @@ const RoutineView: React.FC<RoutineViewProps> = ({ user, routine }) => {
 
         } catch (error: any) {
             console.error("Error generating routine:", error);
-            // 3. Improved Error Messaging
-            const errorMessage = error?.message || "Erro desconhecido";
-            alert(`Erro ao processar com IA: ${errorMessage}. Verifique se a API Key está válida.`);
+            
+            let errorMessage = error.message || "Erro desconhecido";
+            
+            try {
+                const jsonStart = errorMessage.indexOf("{");
+                if (jsonStart !== -1) {
+                    const parsed = JSON.parse(errorMessage.substring(jsonStart));
+                    if (parsed.error && parsed.error.message) {
+                        errorMessage = parsed.error.message;
+                    }
+                }
+            } catch (e) {}
+
+            // Tratamento específico para chave vazada/bloqueada
+            if (errorMessage.includes("leaked") || errorMessage.includes("API key")) {
+                alert("⚠️ CHAVE BLOQUEADA PELO GOOGLE:\n\nSua Chave de API foi exposta publicamente e bloqueada.\n\n1. Gere uma nova chave no Google AI Studio.\n2. Atualize o arquivo '.env' com a nova chave.\n3. Reinicie o projeto.");
+            } else {
+                alert(`Erro na IA: ${errorMessage}`);
+            }
         } finally {
             setIsGenerating(false);
         }
