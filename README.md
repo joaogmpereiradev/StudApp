@@ -1,4 +1,4 @@
-# 🎓 StudApp - Alta Performance nos Estudos
+# 🎓 StudApp - Rotina com IA e Revisões de Estudos
 
 ![Status](https://img.shields.io/badge/Status-Em_Desenvolvimento-indigo?style=for-the-badge)
 ![Tech](https://img.shields.io/badge/Stack-React_19_|_Vite_|_Firebase-blue?style=for-the-badge)
